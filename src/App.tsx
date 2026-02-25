@@ -1,5 +1,4 @@
-import { BrowserRouter, useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { AuthProvider } from './contexts/AuthContext';
 import { SubscriptionProvider } from './contexts/SubscriptionContext';
 import { AdminAuthProvider } from './contexts/AdminAuthContext';
@@ -20,7 +19,13 @@ function App() {
       <AuthProvider>
         <SubscriptionProvider>
           <AdminAuthProvider>
-            <AppRoutes />
+            <Suspense fallback={
+              <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+                <div className="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            }>
+              <AppRoutes />
+            </Suspense>
           </AdminAuthProvider>
         </SubscriptionProvider>
       </AuthProvider>
