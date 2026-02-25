@@ -1,4 +1,5 @@
 import { Suspense, useEffect } from 'react';
+import { BrowserRouter, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { SubscriptionProvider } from './contexts/SubscriptionContext';
 import { AdminAuthProvider } from './contexts/AdminAuthContext';
