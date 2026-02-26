@@ -20,6 +20,27 @@ export default function SubscriptionPage() {
     }
   }, [user]);
 
+  // Stripe決済成功後のリダイレクト処理
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('success') === 'true') {
+      // URLパラメータをクリア
+      window.history.replaceState({}, '', '/subscription');
+      // DBが更新されるまで最大10秒ポーリング
+      let retries = 0;
+      const poll = setInterval(async () => {
+        retries++;
+        await refreshSubscription();
+        await fetchUserProfile();
+        // premiumになったか5回試みたら終了
+        if (retries >= 5) clearInterval(poll);
+      }, 2000);
+    }
+    if (params.get('canceled') === 'true') {
+      window.history.replaceState({}, '', '/subscription');
+    }
+  }, []);
+
   const fetchUserProfile = async () => {
     if (!user) return;
 
