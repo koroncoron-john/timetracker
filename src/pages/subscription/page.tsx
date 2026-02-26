@@ -55,8 +55,11 @@ export default function SubscriptionPage() {
             Authorization: `Bearer ${import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY}`,
           },
           body: JSON.stringify({
-            email: user.email,
+            userEmail: user.email,
+            userId: user.id,
             priceId: 'price_1T5AtKADfoOCP027RS9iLrSE',
+            successUrl: `${window.location.origin}/subscription?success=true`,
+            cancelUrl: `${window.location.origin}/subscription?canceled=true`,
           }),
         }
       );
