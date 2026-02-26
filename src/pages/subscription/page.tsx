@@ -57,7 +57,7 @@ export default function SubscriptionPage() {
           body: JSON.stringify({
             userEmail: user.email,
             userId: user.id,
-            priceId: 'price_1T5AtKADfoOCP027RS9iLrSE',
+            priceId: 'price_1T5BOfABoy8HO0Oz1Ywm97em',
             successUrl: `${window.location.origin}/subscription?success=true`,
             cancelUrl: `${window.location.origin}/subscription?canceled=true`,
           }),
