@@ -65,15 +65,16 @@ export default function SubscriptionPage() {
       );
 
       const data = await response.json();
+      console.log('Edge Function response:', JSON.stringify(data));
 
       if (data.url) {
         window.location.href = data.url;
       } else {
-        throw new Error('チェックアウトURLの取得に失敗しました');
+        throw new Error(data.error || 'チェックアウトURLの取得に失敗しました');
       }
     } catch (error) {
-      console.error('アップグレードエラー:', error);
-      alert('アップグレード処理に失敗しました。もう一度お試しください。');
+      console.error('アップグレードエラー詳細:', error);
+      alert(`アップグレード処理に失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`);
     } finally {
       setLoading(false);
     }
