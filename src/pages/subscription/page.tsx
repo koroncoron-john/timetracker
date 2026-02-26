@@ -5,10 +5,14 @@ import { supabase } from '../../lib/supabase';
 
 export default function SubscriptionPage() {
   const { user } = useAuth();
-  const { plan, status, updateSubscription } = useSubscription();
+  const { plan, refreshSubscription } = useSubscription();
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
+  const status = userProfile?.subscription_status ?? 'active';
+  const updateSubscription = async (_plan: string, _status: string) => {
+    await refreshSubscription();
+  };
 
   useEffect(() => {
     if (user) {
@@ -52,7 +56,7 @@ export default function SubscriptionPage() {
           },
           body: JSON.stringify({
             email: user.email,
-            priceId: 'price_1QpqxnP3ônMfJQxBBqJxqxqx',
+            priceId: 'price_1T5AtKADfoOCP027RS9iLrSE',
           }),
         }
       );
