@@ -115,7 +115,7 @@ export default function SubscriptionPage() {
             Authorization: `Bearer ${import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY}`,
           },
           body: JSON.stringify({
-            email: user.email,
+            userEmail: user.email,
           }),
         }
       );
