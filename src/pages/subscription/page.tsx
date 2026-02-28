@@ -130,6 +130,7 @@ export default function SubscriptionPage() {
       );
 
       const data = await response.json();
+      console.log('キャンセルAPIレスポンス:', JSON.stringify(data));
 
       if (data.success) {
         // キャンセル日を保存
@@ -147,9 +148,10 @@ export default function SubscriptionPage() {
           })
           .eq('id', user.id);
 
-        await refreshSubscription();
         setShowCancelModal(false);
         await fetchUserProfile();
+        await refreshSubscription();
+        alert('サブスクリプションのキャンセルを受け付けました。現在の請求期間終了後に無料プランへ切り替わります。');
       } else {
         throw new Error(data.error || 'キャンセル処理に失敗しました');
       }
