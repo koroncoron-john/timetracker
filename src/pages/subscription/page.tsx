@@ -9,10 +9,19 @@ export default function SubscriptionPage() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [cancelAtDate, setCancelAtDate] = useState<Date | null>(null);
   const status = userProfile?.subscription_status ?? 'active';
   const updateSubscription = async (_plan: string, _status: string) => {
     await refreshSubscription();
   };
+
+  // キャンセル日をlocalStorageから復元
+  useEffect(() => {
+    if (status === 'canceling' && user) {
+      const stored = localStorage.getItem(`cancelAt_${user.id}`);
+      if (stored) setCancelAtDate(new Date(parseInt(stored) * 1000));
+    }
+  }, [status, user]);
 
   useEffect(() => {
     if (user) {
@@ -123,17 +132,22 @@ export default function SubscriptionPage() {
       const data = await response.json();
 
       if (data.success) {
-        // Update local state
+        // キャンセル日を保存
+        if (data.cancelAt) {
+          const date = new Date(data.cancelAt * 1000);
+          setCancelAtDate(date);
+          localStorage.setItem(`cancelAt_${user.id}`, data.cancelAt.toString());
+        }
+        // DBはcancelingに更新（期間中はまだpremium）
         await supabase
           .from('user_profiles')
           .update({
-            subscription_plan: 'free',
-            subscription_status: 'inactive'
+            subscription_plan: 'premium',
+            subscription_status: 'canceling'
           })
           .eq('id', user.id);
 
-        updateSubscription('free', 'inactive');
-        alert('サブスクリプションをキャンセルしました。現在の請求期間終了後に無料プランに切り替わります。');
+        await refreshSubscription();
         setShowCancelModal(false);
         await fetchUserProfile();
       } else {
@@ -147,11 +161,43 @@ export default function SubscriptionPage() {
     }
   };
 
+  const handleReactivate = async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_PUBLIC_SUPABASE_URL}/functions/v1/reactivate-subscription`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY}` },
+          body: JSON.stringify({ userEmail: user.email }),
+        }
+      );
+      const data = await response.json();
+      if (data.success) {
+        await supabase.from('user_profiles').update({ subscription_status: 'active' }).eq('id', user.id);
+        localStorage.removeItem(`cancelAt_${user.id}`);
+        setCancelAtDate(null);
+        await refreshSubscription();
+        await fetchUserProfile();
+        alert('サブスクリプションのキャンセルを取り消しました。引き続きプレミアムプランをご利用いただけます。');
+      } else {
+        throw new Error(data.error || '再有効化に失敗しました');
+      }
+    } catch (error: any) {
+      alert(error.message || '再有効化処理に失敗しました');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const openBillingPortal = () => {
     window.open('https://billing.stripe.com/p/login/9AQcQv2uXgew9wsaEE', '_blank');
   };
 
-  const isPremium = plan === 'premium' && status === 'active';
+  const isPremium = plan === 'premium' && (status === 'active' || status === 'canceling');
+  const isCanceling = plan === 'premium' && status === 'canceling';
+  const formatCancelDate = (date: Date) => `${date.getMonth() + 1}月${date.getDate()}日`;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -184,9 +230,14 @@ export default function SubscriptionPage() {
                 <span className="text-3xl font-bold text-teal-600">
                   {isPremium ? 'プレミアムプラン' : '無料プラン'}
                 </span>
-                {isPremium && (
+                {isPremium && !isCanceling && (
                   <span className="px-3 py-1 bg-teal-100 text-teal-800 text-sm font-semibold rounded-full">
                     アクティブ
+                  </span>
+                )}
+                {isCanceling && (
+                  <span className="px-3 py-1 bg-orange-100 text-orange-800 text-sm font-semibold rounded-full">
+                    キャンセル処理中{cancelAtDate ? `（${formatCancelDate(cancelAtDate)}まで有効）` : ''}
                   </span>
                 )}
               </div>
@@ -217,7 +268,7 @@ export default function SubscriptionPage() {
                 </div>
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex gap-3 flex-wrap">
                 <button
                   onClick={openBillingPortal}
                   className="px-6 py-3 bg-teal-600 text-white rounded-lg font-medium hover:bg-teal-700 transition-colors whitespace-nowrap cursor-pointer"
@@ -225,13 +276,25 @@ export default function SubscriptionPage() {
                   <i className="ri-file-list-3-line mr-2"></i>
                   決済履歴を確認
                 </button>
-                <button
-                  onClick={() => setShowCancelModal(true)}
-                  className="px-6 py-3 border border-red-300 text-red-600 rounded-lg font-medium hover:bg-red-50 transition-colors whitespace-nowrap cursor-pointer"
-                >
-                  <i className="ri-close-circle-line mr-2"></i>
-                  プランをキャンセル
-                </button>
+                {!isCanceling && (
+                  <button
+                    onClick={() => setShowCancelModal(true)}
+                    className="px-6 py-3 border border-red-300 text-red-600 rounded-lg font-medium hover:bg-red-50 transition-colors whitespace-nowrap cursor-pointer"
+                  >
+                    <i className="ri-close-circle-line mr-2"></i>
+                    プランをキャンセル
+                  </button>
+                )}
+                {isCanceling && (
+                  <button
+                    onClick={handleReactivate}
+                    disabled={loading}
+                    className="px-6 py-3 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors whitespace-nowrap cursor-pointer disabled:opacity-50"
+                  >
+                    <i className="ri-refresh-line mr-2"></i>
+                    {loading ? '処理中...' : '引き続き使用する場合は、こちらをクリック'}
+                  </button>
+                )}
               </div>
             </div>
           ) : (
