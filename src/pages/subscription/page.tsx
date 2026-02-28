@@ -149,9 +149,8 @@ export default function SubscriptionPage() {
           .eq('id', user.id);
 
         setShowCancelModal(false);
-        await fetchUserProfile();
-        await refreshSubscription();
         alert('サブスクリプションのキャンセルを受け付けました。現在の請求期間終了後に無料プランへ切り替わります。');
+        window.location.reload();
       } else {
         throw new Error(data.error || 'キャンセル処理に失敗しました');
       }
