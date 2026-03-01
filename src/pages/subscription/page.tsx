@@ -17,7 +17,7 @@ export default function SubscriptionPage() {
 
   // キャンセル日をlocalStorageから復元
   useEffect(() => {
-    if (status === 'canceling' && user) {
+    if (status === 'canceled' && user) {
       const stored = localStorage.getItem(`cancelAt_${user.id}`);
       if (stored) setCancelAtDate(new Date(parseInt(stored) * 1000));
     }
@@ -188,8 +188,8 @@ export default function SubscriptionPage() {
     window.open('https://billing.stripe.com/p/login/9AQcQv2uXgew9wsaEE', '_blank');
   };
 
-  const isPremium = plan === 'premium' && (status === 'active' || status === 'canceling');
-  const isCanceling = plan === 'premium' && status === 'canceling';
+  const isPremium = plan === 'premium' && (status === 'active' || status === 'canceled');
+  const isCanceling = plan === 'premium' && status === 'canceled';
   const formatCancelDate = (date: Date) => `${date.getMonth() + 1}月${date.getDate()}日`;
 
   return (
