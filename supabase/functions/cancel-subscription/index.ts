@@ -83,7 +83,7 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             subscription_plan: 'premium',
-            subscription_status: 'canceling',
+            subscription_status: 'canceled',
           }),
         }
       );
