@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import Stripe from 'https://esm.sh/stripe@14.21.0?target=deno';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,7 +22,7 @@ serve(async (req) => {
       apiVersion: '2023-10-16',
     });
 
-    const { userEmail } = await req.json();
+    const { userEmail, userId } = await req.json();
 
     if (!userEmail) {
       return new Response(
@@ -66,15 +67,31 @@ serve(async (req) => {
       cancel_at_period_end: true,
     });
 
+    // Supabase service roleでDBを更新（RLSをバイパス）
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+    if (supabaseUrl && serviceRoleKey && userId) {
+      const supabase = createClient(supabaseUrl, serviceRoleKey);
+      await supabase
+        .from('user_profiles')
+        .update({
+          subscription_plan: 'premium',
+          subscription_status: 'canceling',
+        })
+        .eq('id', userId);
+      console.log('DB updated to canceling for userId:', userId);
+    }
+
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         success: true,
         subscriptionId: canceledSubscription.id,
         cancelAt: canceledSubscription.cancel_at,
       }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
 

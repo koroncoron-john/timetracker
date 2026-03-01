@@ -125,6 +125,7 @@ export default function SubscriptionPage() {
           },
           body: JSON.stringify({
             userEmail: user.email,
+            userId: user.id,
           }),
         }
       );
@@ -133,21 +134,12 @@ export default function SubscriptionPage() {
       console.log('キャンセルAPIレスポンス:', JSON.stringify(data));
 
       if (data.success) {
-        // キャンセル日を保存
+        // キャンセル日を保存（localStorageに永続化）
         if (data.cancelAt) {
           const date = new Date(data.cancelAt * 1000);
           setCancelAtDate(date);
           localStorage.setItem(`cancelAt_${user.id}`, data.cancelAt.toString());
         }
-        // DBはcancelingに更新（期間中はまだpremium）
-        await supabase
-          .from('user_profiles')
-          .update({
-            subscription_plan: 'premium',
-            subscription_status: 'canceling'
-          })
-          .eq('id', user.id);
-
         setShowCancelModal(false);
         alert('サブスクリプションのキャンセルを受け付けました。現在の請求期間終了後に無料プランへ切り替わります。');
         window.location.reload();
