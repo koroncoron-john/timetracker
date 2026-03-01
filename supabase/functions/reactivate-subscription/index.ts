@@ -17,7 +17,7 @@ serve(async (req) => {
 
         const stripe = new Stripe(stripeSecretKey, { apiVersion: '2023-10-16' });
 
-        const { userEmail } = await req.json();
+        const { userEmail, userId } = await req.json();
         if (!userEmail) {
             return new Response(
                 JSON.stringify({ error: 'User email is required' }),
@@ -56,6 +56,30 @@ serve(async (req) => {
         const reactivated = await stripe.subscriptions.update(subscription.id, {
             cancel_at_period_end: false,
         });
+
+        // Supabase REST APIでDBをactiveに更新（RLSをバイパス）
+        const supabaseUrl = Deno.env.get('SUPABASE_URL');
+        const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+        if (supabaseUrl && serviceRoleKey && userId) {
+            const updateRes = await fetch(
+                `${supabaseUrl}/rest/v1/user_profiles?id=eq.${userId}`,
+                {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': serviceRoleKey,
+                        'Authorization': `Bearer ${serviceRoleKey}`,
+                        'Prefer': 'return=minimal',
+                    },
+                    body: JSON.stringify({
+                        subscription_plan: 'premium',
+                        subscription_status: 'active',
+                    }),
+                }
+            );
+            console.log('DB reactivate update status:', updateRes.status);
+        }
 
         return new Response(
             JSON.stringify({ success: true, subscriptionId: reactivated.id }),
