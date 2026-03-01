@@ -163,17 +163,14 @@ export default function SubscriptionPage() {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY}` },
-          body: JSON.stringify({ userEmail: user.email }),
+          body: JSON.stringify({ userEmail: user.email, userId: user.id }),
         }
       );
       const data = await response.json();
       if (data.success) {
-        await supabase.from('user_profiles').update({ subscription_status: 'active' }).eq('id', user.id);
         localStorage.removeItem(`cancelAt_${user.id}`);
-        setCancelAtDate(null);
-        await refreshSubscription();
-        await fetchUserProfile();
         alert('サブスクリプションのキャンセルを取り消しました。引き続きプレミアムプランをご利用いただけます。');
+        window.location.reload();
       } else {
         throw new Error(data.error || '再有効化に失敗しました');
       }
