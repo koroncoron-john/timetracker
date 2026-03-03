@@ -2,6 +2,7 @@ import { lazy } from 'react';
 import { RouteObject, Navigate } from 'react-router-dom';
 import ProtectedRoute from '../components/ProtectedRoute';
 import { AdminProtectedRoute } from '../components/AdminProtectedRoute';
+import UserLayout from '../components/UserLayout';
 
 const HomePage = lazy(() => import('../pages/home/page'));
 const LoginPage = lazy(() => import('../pages/login/page'));
@@ -21,6 +22,7 @@ const ExpertRegisterPage = lazy(() => import('../pages/expert-register/page'));
 const NotFoundPage = lazy(() => import('../pages/NotFound'));
 
 const routes: RouteObject[] = [
+  // === 公開ページ ===
   {
     path: '/',
     element: <HomePage />,
@@ -29,54 +31,43 @@ const routes: RouteObject[] = [
     path: '/login',
     element: <LoginPage />,
   },
+
+  // === ユーザー側ページ（UserLayout でラップ） ===
   {
-    path: '/dashboard',
     element: (
       <ProtectedRoute>
-        <DashboardPage />
+        <UserLayout />
       </ProtectedRoute>
     ),
+    children: [
+      {
+        path: '/dashboard',
+        element: <DashboardPage />,
+      },
+      {
+        path: '/project/:projectId',
+        element: <ProjectPage />,
+      },
+      {
+        path: '/tracker/:projectId',
+        element: <TrackerPage />,
+      },
+      {
+        path: '/mypage',
+        element: <MyPage />,
+      },
+      {
+        path: '/subscription',
+        element: <SubscriptionPage />,
+      },
+      {
+        path: '/consultation',
+        element: <ConsultationPage />,
+      },
+    ],
   },
-  {
-    path: '/project/:projectId',
-    element: (
-      <ProtectedRoute>
-        <ProjectPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/tracker/:projectId',
-    element: (
-      <ProtectedRoute>
-        <TrackerPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/mypage',
-    element: (
-      <ProtectedRoute>
-        <MyPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/subscription',
-    element: (
-      <ProtectedRoute>
-        <SubscriptionPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/consultation',
-    element: (
-      <ProtectedRoute>
-        <ConsultationPage />
-      </ProtectedRoute>
-    ),
-  },
+
+  // === 管理者ページ ===
   {
     path: '/expert-register',
     element: <Navigate to="/admin/experts" replace />,
@@ -125,6 +116,8 @@ const routes: RouteObject[] = [
       </AdminProtectedRoute>
     ),
   },
+
+  // === その他 ===
   {
     path: '/404',
     element: <NotFoundPage />,

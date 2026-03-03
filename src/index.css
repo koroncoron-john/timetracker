@@ -31,6 +31,27 @@
     background-size: 200% 200%;
     animation: gradient 3s ease infinite;
   }
+
+  /* デザイン統一のためのベーススタイル */
+  .bg-main-gradient {
+    @apply bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900;
+  }
+
+  .glass-card {
+    @apply backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl;
+  }
+
+  .glass-panel {
+    @apply backdrop-blur-xl bg-white/5 border border-white/10;
+  }
+
+  .btn-primary-gradient {
+    @apply bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-white font-bold transition-all duration-200 transform hover:scale-105;
+  }
+
+  .text-gradient {
+    @apply bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent;
+  }
 }
 
 body {

@@ -1,4 +1,4 @@
-export type ProjectStatus = 'backlog' | 'in_progress' | 'completed' | 'maintenance';
+export type ProjectStatus = 'backlog' | 'in_progress' | 'completed' | 'maintenance' | '進行中' | '完了' | 'done';
 
 export interface MaintenanceCost {
   id: string;
