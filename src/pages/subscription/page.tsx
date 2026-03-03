@@ -15,7 +15,6 @@ export default function SubscriptionPage() {
     await refreshSubscription();
   };
 
-  // キャンセル日をlocalStorageから復元
   useEffect(() => {
     if (status === 'canceled' && user) {
       const stored = localStorage.getItem(`cancelAt_${user.id}`);
@@ -29,19 +28,15 @@ export default function SubscriptionPage() {
     }
   }, [user]);
 
-  // Stripe決済成功後のリダイレクト処理
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('success') === 'true') {
-      // URLパラメータをクリア
       window.history.replaceState({}, '', '/subscription');
-      // DBが更新されるまで最大10秒ポーリング
       let retries = 0;
       const poll = setInterval(async () => {
         retries++;
         await refreshSubscription();
         await fetchUserProfile();
-        // premiumになったか5回試みたら終了
         if (retries >= 5) clearInterval(poll);
       }, 2000);
     }
@@ -63,7 +58,6 @@ export default function SubscriptionPage() {
       if (error) throw error;
       if (data) {
         setUserProfile(data);
-        // Update context with latest data
         updateSubscription(data.subscription_plan, data.subscription_status);
       }
     } catch (error) {
@@ -134,7 +128,6 @@ export default function SubscriptionPage() {
       console.log('キャンセルAPIレスポンス:', JSON.stringify(data));
 
       if (data.success) {
-        // キャンセル日を保存（localStorageに永続化）
         if (data.cancelAt) {
           const date = new Date(data.cancelAt * 1000);
           setCancelAtDate(date);
@@ -190,273 +183,258 @@ export default function SubscriptionPage() {
   const formatCancelDate = (date: Date) => `${date.getMonth() + 1}月${date.getDate()}日`;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">サブスクリプション</h1>
-              <p className="mt-2 text-sm text-gray-600">プランの確認と管理</p>
-            </div>
-            <a
-              href="/dashboard"
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 whitespace-nowrap cursor-pointer"
-            >
-              <i className="ri-arrow-left-line mr-2"></i>
-              ダッシュボードに戻る
-            </a>
-          </div>
-        </div>
-      </header>
+    <div className="p-4 md:p-8 max-w-7xl mx-auto">
+      {/* ページヘッダー */}
+      <div className="mb-8">
+        <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">サブスクリプション</h1>
+        <p className="text-gray-400">プランの確認と管理</p>
+      </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Current Plan Card */}
-        <div className="bg-white rounded-xl border border-gray-200 p-8 mb-8">
-          <div className="flex items-start justify-between mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">現在のプラン</h2>
-              <div className="flex items-center gap-3">
-                <span className="text-3xl font-bold text-teal-600">
-                  {isPremium ? 'プレミアムプラン' : '無料プラン'}
+      {/* 現在のプラン */}
+      <div className="glass-card p-6 md:p-8 mb-8">
+        <div className="flex items-start justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-bold text-white mb-2">現在のプラン</h2>
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-2xl md:text-3xl font-bold text-gradient">
+                {isPremium ? 'プレミアムプラン' : '無料プラン'}
+              </span>
+              {isPremium && !isCanceling && (
+                <span className="px-3 py-1 bg-cyan-500/20 text-cyan-300 text-sm font-semibold rounded-full border border-cyan-500/30">
+                  アクティブ
                 </span>
-                {isPremium && !isCanceling && (
-                  <span className="px-3 py-1 bg-teal-100 text-teal-800 text-sm font-semibold rounded-full">
-                    アクティブ
-                  </span>
-                )}
-                {isCanceling && (
-                  <span className="px-3 py-1 bg-orange-100 text-orange-800 text-sm font-semibold rounded-full">
-                    キャンセル処理中{cancelAtDate ? `（${formatCancelDate(cancelAtDate)}まで有効）` : ''}
-                  </span>
-                )}
-              </div>
+              )}
+              {isCanceling && (
+                <span className="px-3 py-1 bg-orange-500/20 text-orange-300 text-sm font-semibold rounded-full border border-orange-500/30">
+                  キャンセル処理中{cancelAtDate ? `（${formatCancelDate(cancelAtDate)}まで有効）` : ''}
+                </span>
+              )}
             </div>
-            {isPremium && (
-              <div className="w-16 h-16 bg-gradient-to-br from-teal-400 to-teal-600 rounded-full flex items-center justify-center">
-                <i className="ri-vip-crown-line text-white text-3xl"></i>
-              </div>
-            )}
           </div>
-
-          {isPremium ? (
-            <div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <div className="text-sm text-gray-600 mb-1">月額料金</div>
-                  <div className="text-2xl font-bold text-gray-900">¥2,980</div>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <div className="text-sm text-gray-600 mb-1">ステータス</div>
-                  <div className="text-2xl font-bold text-teal-600">
-                    {status === 'active' ? 'アクティブ' : status}
-                  </div>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <div className="text-sm text-gray-600 mb-1">プロジェクト数</div>
-                  <div className="text-2xl font-bold text-gray-900">無制限</div>
-                </div>
-              </div>
-
-              <div className="flex gap-3 flex-wrap">
-                <button
-                  onClick={openBillingPortal}
-                  className="px-6 py-3 bg-teal-600 text-white rounded-lg font-medium hover:bg-teal-700 transition-colors whitespace-nowrap cursor-pointer"
-                >
-                  <i className="ri-file-list-3-line mr-2"></i>
-                  決済履歴を確認
-                </button>
-                {!isCanceling && (
-                  <button
-                    onClick={() => setShowCancelModal(true)}
-                    className="px-6 py-3 border border-red-300 text-red-600 rounded-lg font-medium hover:bg-red-50 transition-colors whitespace-nowrap cursor-pointer"
-                  >
-                    <i className="ri-close-circle-line mr-2"></i>
-                    プランをキャンセル
-                  </button>
-                )}
-                {isCanceling && (
-                  <button
-                    onClick={handleReactivate}
-                    disabled={loading}
-                    className="px-6 py-3 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors whitespace-nowrap cursor-pointer disabled:opacity-50"
-                  >
-                    <i className="ri-refresh-line mr-2"></i>
-                    {loading ? '処理中...' : '引き続き使用する場合は、こちらをクリック'}
-                  </button>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div>
-              <p className="text-gray-600 mb-6">
-                現在、無料プランをご利用中です。プレミアムプランにアップグレードして、すべての機能をご利用ください。
-              </p>
-              <button
-                onClick={handleUpgrade}
-                disabled={loading}
-                className="px-6 py-3 bg-teal-600 text-white rounded-lg font-medium hover:bg-teal-700 transition-colors disabled:opacity-50 whitespace-nowrap cursor-pointer"
-              >
-                {loading ? '処理中...' : 'プレミアムプランにアップグレード'}
-              </button>
+          {isPremium && (
+            <div className="w-16 h-16 bg-gradient-to-br from-cyan-500 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
+              <i className="ri-vip-crown-line text-white text-3xl"></i>
             </div>
           )}
         </div>
 
-        {/* Plan Comparison */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Free Plan */}
-          <div className="bg-white rounded-xl border border-gray-200 p-8">
-            <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">無料プラン</h3>
-              <div className="text-4xl font-bold text-gray-900 mb-2">¥0</div>
-              <p className="text-sm text-gray-600">永久無料</p>
+        {isPremium ? (
+          <div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                <div className="text-sm text-gray-400 mb-1">月額料金</div>
+                <div className="text-2xl font-bold text-white">¥2,980</div>
+              </div>
+              <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                <div className="text-sm text-gray-400 mb-1">ステータス</div>
+                <div className="text-2xl font-bold text-cyan-400">
+                  {status === 'active' ? 'アクティブ' : status}
+                </div>
+              </div>
+              <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                <div className="text-sm text-gray-400 mb-1">プロジェクト数</div>
+                <div className="text-2xl font-bold text-white">無制限</div>
+              </div>
             </div>
 
-            <ul className="space-y-4 mb-8">
-              <li className="flex items-start">
-                <i className="ri-check-line text-teal-600 text-xl mr-3 mt-0.5"></i>
-                <span className="text-gray-700">プロジェクト数: 最大3件</span>
-              </li>
-              <li className="flex items-start">
-                <i className="ri-check-line text-teal-600 text-xl mr-3 mt-0.5"></i>
-                <span className="text-gray-700">基本的なタイムトラッキング</span>
-              </li>
-              <li className="flex items-start">
-                <i className="ri-check-line text-teal-600 text-xl mr-3 mt-0.5"></i>
-                <span className="text-gray-700">保守費用管理</span>
-              </li>
-              <li className="flex items-start">
-                <i className="ri-close-line text-gray-400 text-xl mr-3 mt-0.5"></i>
-                <span className="text-gray-400">無制限プロジェクト</span>
-              </li>
-              <li className="flex items-start">
-                <i className="ri-close-line text-gray-400 text-xl mr-3 mt-0.5"></i>
-                <span className="text-gray-400">高度なレポート機能</span>
-              </li>
-              <li className="flex items-start">
-                <i className="ri-close-line text-gray-400 text-xl mr-3 mt-0.5"></i>
-                <span className="text-gray-400">優先サポート</span>
-              </li>
-            </ul>
-
-            {!isPremium && (
-              <div className="text-center">
-                <span className="inline-block px-4 py-2 bg-gray-100 text-gray-600 rounded-lg font-medium">
-                  現在のプラン
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Premium Plan */}
-          <div className="bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl p-8 text-white relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
-            <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
-
-            <div className="relative">
-              <div className="flex items-center justify-center mb-6">
-                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mr-3">
-                  <i className="ri-vip-crown-line text-2xl"></i>
-                </div>
-                <h3 className="text-2xl font-bold">プレミアムプラン</h3>
-              </div>
-
-              <div className="text-center mb-6">
-                <div className="text-5xl font-bold mb-2">¥2,980</div>
-                <p className="text-teal-100">月額（税込）</p>
-              </div>
-
-              <ul className="space-y-4 mb-8">
-                <li className="flex items-start">
-                  <i className="ri-check-line text-xl mr-3 mt-0.5"></i>
-                  <span>プロジェクト数: 無制限</span>
-                </li>
-                <li className="flex items-start">
-                  <i className="ri-check-line text-xl mr-3 mt-0.5"></i>
-                  <span>高度なタイムトラッキング</span>
-                </li>
-                <li className="flex items-start">
-                  <i className="ri-check-line text-xl mr-3 mt-0.5"></i>
-                  <span>詳細な保守費用管理</span>
-                </li>
-                <li className="flex items-start">
-                  <i className="ri-check-line text-xl mr-3 mt-0.5"></i>
-                  <span>カスタムレポート作成</span>
-                </li>
-                <li className="flex items-start">
-                  <i className="ri-check-line text-xl mr-3 mt-0.5"></i>
-                  <span>データエクスポート機能</span>
-                </li>
-                <li className="flex items-start">
-                  <i className="ri-check-line text-xl mr-3 mt-0.5"></i>
-                  <span>優先メールサポート</span>
-                </li>
-              </ul>
-
-              {isPremium ? (
-                <div className="text-center">
-                  <span className="inline-block px-4 py-2 bg-white/20 rounded-lg font-medium">
-                    現在のプラン
-                  </span>
-                </div>
-              ) : (
+            <div className="flex gap-3 flex-wrap">
+              <button
+                onClick={openBillingPortal}
+                className="px-6 py-3 btn-primary-gradient text-white rounded-xl font-medium whitespace-nowrap cursor-pointer"
+              >
+                <i className="ri-file-list-3-line mr-2"></i>
+                決済履歴を確認
+              </button>
+              {!isCanceling && (
                 <button
-                  onClick={handleUpgrade}
-                  disabled={loading}
-                  className="w-full px-6 py-3 bg-white text-teal-600 rounded-lg font-bold hover:bg-teal-50 transition-colors disabled:opacity-50 whitespace-nowrap cursor-pointer"
+                  onClick={() => setShowCancelModal(true)}
+                  className="px-6 py-3 border border-red-500/30 text-red-400 rounded-xl font-medium hover:bg-red-500/10 transition-colors whitespace-nowrap cursor-pointer"
                 >
-                  {loading ? '処理中...' : 'プレミアムプランを始める'}
+                  <i className="ri-close-circle-line mr-2"></i>
+                  プランをキャンセル
+                </button>
+              )}
+              {isCanceling && (
+                <button
+                  onClick={handleReactivate}
+                  disabled={loading}
+                  className="px-6 py-3 bg-orange-500/20 text-orange-300 border border-orange-500/30 rounded-xl font-medium hover:bg-orange-500/30 transition-colors whitespace-nowrap cursor-pointer disabled:opacity-50"
+                >
+                  <i className="ri-refresh-line mr-2"></i>
+                  {loading ? '処理中...' : '引き続き使用する場合は、こちらをクリック'}
                 </button>
               )}
             </div>
           </div>
-        </div>
-
-        {/* Billing Management */}
-        {isPremium && (
-          <div className="mt-8 bg-white rounded-xl border border-gray-200 p-8">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">決済・請求管理</h3>
-            <p className="text-gray-600 mb-6">
-              Stripeカスタマーポータルで、決済履歴の確認、請求書のダウンロード、支払い方法の変更が行えます。
+        ) : (
+          <div>
+            <p className="text-gray-400 mb-6">
+              現在、無料プランをご利用中です。プレミアムプランにアップグレードして、すべての機能をご利用ください。
             </p>
             <button
-              onClick={openBillingPortal}
-              className="px-6 py-3 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition-colors whitespace-nowrap cursor-pointer"
+              onClick={handleUpgrade}
+              disabled={loading}
+              className="px-6 py-3 btn-primary-gradient text-white rounded-xl font-medium disabled:opacity-50 whitespace-nowrap cursor-pointer"
             >
-              <i className="ri-external-link-line mr-2"></i>
-              決済履歴・請求管理
+              {loading ? '処理中...' : 'プレミアムプランにアップグレード'}
             </button>
           </div>
         )}
       </div>
 
-      {/* Cancel Confirmation Modal */}
-      {showCancelModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
-            <div className="flex items-center mb-4">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mr-4">
-                <i className="ri-error-warning-line text-red-600 text-2xl"></i>
+      {/* プラン比較 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+        {/* 無料プラン */}
+        <div className="glass-card p-6 md:p-8">
+          <div className="text-center mb-6">
+            <h3 className="text-2xl font-bold text-white mb-2">無料プラン</h3>
+            <div className="text-4xl font-bold text-white mb-2">¥0</div>
+            <p className="text-sm text-gray-400">永久無料</p>
+          </div>
+
+          <ul className="space-y-4 mb-8">
+            <li className="flex items-start">
+              <i className="ri-check-line text-cyan-400 text-xl mr-3 mt-0.5"></i>
+              <span className="text-gray-300">プロジェクト数: 最大3件</span>
+            </li>
+            <li className="flex items-start">
+              <i className="ri-check-line text-cyan-400 text-xl mr-3 mt-0.5"></i>
+              <span className="text-gray-300">基本的なタイムトラッキング</span>
+            </li>
+            <li className="flex items-start">
+              <i className="ri-check-line text-cyan-400 text-xl mr-3 mt-0.5"></i>
+              <span className="text-gray-300">保守費用管理</span>
+            </li>
+            <li className="flex items-start">
+              <i className="ri-close-line text-gray-600 text-xl mr-3 mt-0.5"></i>
+              <span className="text-gray-600">無制限プロジェクト</span>
+            </li>
+            <li className="flex items-start">
+              <i className="ri-close-line text-gray-600 text-xl mr-3 mt-0.5"></i>
+              <span className="text-gray-600">高度なレポート機能</span>
+            </li>
+            <li className="flex items-start">
+              <i className="ri-close-line text-gray-600 text-xl mr-3 mt-0.5"></i>
+              <span className="text-gray-600">優先サポート</span>
+            </li>
+          </ul>
+
+          {!isPremium && (
+            <div className="text-center">
+              <span className="inline-block px-4 py-2 bg-white/5 text-gray-400 rounded-xl font-medium border border-white/10">
+                現在のプラン
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* プレミアムプラン */}
+        <div className="relative rounded-2xl p-6 md:p-8 overflow-hidden" style={{ background: 'linear-gradient(135deg, #0891b2, #7c3aed)' }}>
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
+
+          <div className="relative">
+            <div className="flex items-center justify-center mb-6">
+              <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mr-3">
+                <i className="ri-vip-crown-line text-2xl text-white"></i>
               </div>
-              <h3 className="text-xl font-bold text-gray-900">プランをキャンセルしますか？</h3>
+              <h3 className="text-2xl font-bold text-white">プレミアムプラン</h3>
             </div>
 
-            <p className="text-gray-600 mb-6">
+            <div className="text-center mb-6">
+              <div className="text-5xl font-bold text-white mb-2">¥2,980</div>
+              <p className="text-white/70">月額（税込）</p>
+            </div>
+
+            <ul className="space-y-4 mb-8">
+              <li className="flex items-start">
+                <i className="ri-check-line text-xl mr-3 mt-0.5 text-white"></i>
+                <span className="text-white">プロジェクト数: 無制限</span>
+              </li>
+              <li className="flex items-start">
+                <i className="ri-check-line text-xl mr-3 mt-0.5 text-white"></i>
+                <span className="text-white">高度なタイムトラッキング</span>
+              </li>
+              <li className="flex items-start">
+                <i className="ri-check-line text-xl mr-3 mt-0.5 text-white"></i>
+                <span className="text-white">詳細な保守費用管理</span>
+              </li>
+              <li className="flex items-start">
+                <i className="ri-check-line text-xl mr-3 mt-0.5 text-white"></i>
+                <span className="text-white">カスタムレポート作成</span>
+              </li>
+              <li className="flex items-start">
+                <i className="ri-check-line text-xl mr-3 mt-0.5 text-white"></i>
+                <span className="text-white">データエクスポート機能</span>
+              </li>
+              <li className="flex items-start">
+                <i className="ri-check-line text-xl mr-3 mt-0.5 text-white"></i>
+                <span className="text-white">優先メールサポート</span>
+              </li>
+            </ul>
+
+            {isPremium ? (
+              <div className="text-center">
+                <span className="inline-block px-4 py-2 bg-white/20 rounded-xl font-medium text-white">
+                  現在のプラン
+                </span>
+              </div>
+            ) : (
+              <button
+                onClick={handleUpgrade}
+                disabled={loading}
+                className="w-full px-6 py-3 bg-white text-cyan-600 rounded-xl font-bold hover:bg-white/90 transition-colors disabled:opacity-50 whitespace-nowrap cursor-pointer"
+              >
+                {loading ? '処理中...' : 'プレミアムプランを始める'}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 決済管理 */}
+      {isPremium && (
+        <div className="mt-8 glass-card p-6 md:p-8">
+          <h3 className="text-xl font-bold text-white mb-4">決済・請求管理</h3>
+          <p className="text-gray-400 mb-6">
+            Stripeカスタマーポータルで、決済履歴の確認、請求書のダウンロード、支払い方法の変更が行えます。
+          </p>
+          <button
+            onClick={openBillingPortal}
+            className="px-6 py-3 bg-white/10 text-white border border-white/10 rounded-xl font-medium hover:bg-white/20 transition-colors whitespace-nowrap cursor-pointer"
+          >
+            <i className="ri-external-link-line mr-2"></i>
+            決済履歴・請求管理
+          </button>
+        </div>
+      )}
+
+      {/* キャンセル確認モーダル */}
+      {showCancelModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="glass-card max-w-md w-full p-6 border border-white/20">
+            <div className="flex items-center mb-4">
+              <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mr-4">
+                <i className="ri-error-warning-line text-red-400 text-2xl"></i>
+              </div>
+              <h3 className="text-xl font-bold text-white">プランをキャンセルしますか？</h3>
+            </div>
+
+            <p className="text-gray-400 mb-6">
               キャンセルすると、現在の請求期間終了後に以下の特典が失われます：
             </p>
 
             <ul className="space-y-2 mb-6">
-              <li className="flex items-start text-sm text-gray-700">
-                <i className="ri-close-circle-line text-red-500 mr-2 mt-0.5"></i>
+              <li className="flex items-start text-sm text-gray-300">
+                <i className="ri-close-circle-line text-red-400 mr-2 mt-0.5"></i>
                 無制限のプロジェクト作成
               </li>
-              <li className="flex items-start text-sm text-gray-700">
-                <i className="ri-close-circle-line text-red-500 mr-2 mt-0.5"></i>
+              <li className="flex items-start text-sm text-gray-300">
+                <i className="ri-close-circle-line text-red-400 mr-2 mt-0.5"></i>
                 高度なレポート機能
               </li>
-              <li className="flex items-start text-sm text-gray-700">
-                <i className="ri-close-circle-line text-red-500 mr-2 mt-0.5"></i>
+              <li className="flex items-start text-sm text-gray-300">
+                <i className="ri-close-circle-line text-red-400 mr-2 mt-0.5"></i>
                 優先サポート
               </li>
             </ul>
@@ -465,14 +443,14 @@ export default function SubscriptionPage() {
               <button
                 onClick={handleCancelSubscription}
                 disabled={loading}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 disabled:opacity-50 whitespace-nowrap cursor-pointer"
+                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 disabled:opacity-50 whitespace-nowrap cursor-pointer"
               >
                 {loading ? '処理中...' : 'キャンセルする'}
               </button>
               <button
                 onClick={() => setShowCancelModal(false)}
                 disabled={loading}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 disabled:opacity-50 whitespace-nowrap cursor-pointer"
+                className="flex-1 px-4 py-2.5 border border-white/10 text-gray-300 rounded-xl font-medium hover:bg-white/5 disabled:opacity-50 whitespace-nowrap cursor-pointer"
               >
                 戻る
               </button>

@@ -1,18 +1,14 @@
-import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
 
 interface NavItem {
     icon: string;
     label: string;
     path: string;
-    isDynamic?: boolean;
 }
 
 const navItems: NavItem[] = [
     { icon: 'ri-dashboard-line', label: 'ダッシュボード', path: '/dashboard' },
-    { icon: 'ri-time-line', label: 'トラッカー', path: '/tracker', isDynamic: true },
     { icon: 'ri-customer-service-2-line', label: '相談予約', path: '/consultation' },
     { icon: 'ri-user-line', label: 'マイページ', path: '/mypage' },
 ];
@@ -24,49 +20,9 @@ interface UserLayoutProps {
 export default function UserLayout({ children }: UserLayoutProps) {
     const location = useLocation();
     const navigate = useNavigate();
-    const { user, signOut } = useAuth();
-    const [projects, setProjects] = useState<{ id: string }[]>([]);
-    const [projectsLoaded, setProjectsLoaded] = useState(false);
-
-    // 認証状態とプロジェクト読み込みの管理
-    useEffect(() => {
-        const loadProjects = async () => {
-            if (projectsLoaded || !user) return;
-            try {
-                const { data } = await supabase
-                    .from('projects')
-                    .select('id')
-                    .eq('user_id', user.id)
-                    .order('created_at', { ascending: false })
-                    .limit(1);
-                setProjects(data || []);
-                setProjectsLoaded(true);
-            } catch (e) {
-                console.error(e);
-            }
-        };
-
-        if (user && !projectsLoaded) {
-            loadProjects();
-        }
-    }, [user, projectsLoaded]);
-
-    const handleNavClick = (item: NavItem) => {
-        if (item.isDynamic) {
-            if (projects.length > 0) {
-                navigate(`/tracker/${projects[0].id}`);
-            } else {
-                alert('まずプロジェクトを作成してください');
-            }
-        } else {
-            navigate(item.path);
-        }
-    };
+    const { signOut } = useAuth();
 
     const isActive = (item: NavItem) => {
-        if (item.isDynamic) {
-            return location.pathname.startsWith('/tracker');
-        }
         return location.pathname === item.path || location.pathname.startsWith(item.path + '/');
     };
 
@@ -109,7 +65,7 @@ export default function UserLayout({ children }: UserLayoutProps) {
                     {navItems.map((item) => (
                         <button
                             key={item.path}
-                            onClick={() => handleNavClick(item)}
+                            onClick={() => navigate(item.path)}
                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all cursor-pointer ${isActive(item)
                                 ? 'bg-white/10 text-cyan-400 shadow-lg shadow-cyan-500/10'
                                 : 'text-gray-400 hover:text-white hover:bg-white/5'
@@ -174,7 +130,7 @@ export default function UserLayout({ children }: UserLayoutProps) {
                     {navItems.map((item) => (
                         <button
                             key={item.path}
-                            onClick={() => handleNavClick(item)}
+                            onClick={() => navigate(item.path)}
                             className={`flex flex-col items-center gap-1 px-3 py-1 rounded-xl transition-all cursor-pointer min-w-0 ${isActive(item)
                                 ? 'text-cyan-400'
                                 : 'text-gray-500 hover:text-gray-300'
